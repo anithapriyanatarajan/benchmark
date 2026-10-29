@@ -169,6 +169,18 @@ python3 dashboard/live_lab/suite.py --sizes 50,500,5000 --name full          # r
 Use the **draft-06** software stack (`draft06`, the live lab default) for the MTL-versus-non-MTL comparison. A first image build takes tens of minutes;
 it runs in the background with a live log. Details: [`dashboard/live_lab/README.md`](dashboard/live_lab/README.md).
 
+## Run in Codespaces
+
+1. Fork the repository to your personal account first. Organisation repositories get no free quota, and a 4-core
+   machine uses 4 quota hours per real hour.
+2. Create the codespace on a **4-core** machine (the harness is pinned to core 2).
+3. Run `bash scripts/codespace_start.sh`. It checks that Docker is running, then starts the dashboard on port 8501.
+4. Port 8501 stays **Private** by default. Set it to **Public** in the Ports tab only during a demo, then back to
+   Private. A public port has no login, and anyone with the link can use the dashboard, including **Clean up**.
+5. Raise the idle timeout in your GitHub Codespaces settings before a demo; an idle codespace stops.
+6. Timings in a codespace are indicative (shared VM). Do not use them as headline results.
+7. Stop the codespace after use and delete it when done.
+
 ## What a run produces
 
 Each offline run writes `results/runs/<id>/`:
