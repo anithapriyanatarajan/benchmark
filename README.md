@@ -171,8 +171,7 @@ it runs in the background with a live log. Details: [`dashboard/live_lab/README.
 
 ## Run in Codespaces
 
-1. Fork the repository to your personal account first. Organisation repositories get no free quota, and a 4-core
-   machine uses 4 quota hours per real hour.
+1. Fork the repository to your personal account first. Organisation repositories get no free quota, and a 4-core machine uses 4 quota hours per real hour.
 2. Create the codespace on a **4-core** machine (the harness is pinned to core 2).
 3. Run `bash scripts/codespace_start.sh`. It checks that Docker is running, then starts the dashboard on port 8501.
 4. Port 8501 stays **Private** by default. Set it to **Public** in the Ports tab only during a demo, then back to
