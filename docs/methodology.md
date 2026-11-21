@@ -38,7 +38,7 @@ CMake Release build. To compare like with like, the MTL library is compiled at
 `-O2` by passing `CFLAGS` to `make`; the source is untouched and its own test
 suite is re-run on this build by the go/no-go gate. To reproduce the as-shipped
 `-O0` build for an ablation, rebuild with
-`docker compose --env-file ecosystem/stacks/latest.env -f docker/compose.yml build --build-arg MTL_MAKE_CFLAGS=upstream`.
+`docker compose --env-file ecosystem/stacks/latest.env -f docker/build.yml build bench --build-arg MTL_MAKE_CFLAGS=upstream`.
 The flags actually used are recorded in `environment.json`.
 
 Every run writes `environment.json` with:
@@ -374,7 +374,7 @@ Rules the live-lab benchmark follows:
   `draft06` validates it. The MTL versus non-MTL live comparison is therefore
   run on `draft06`. The Unbound binary on `latest` names only the SPHINCS+
   algorithm that liboqs 0.16 removed, which strongly indicates an upstream
-  mismatch; it is not confirmed from source and has not been reported.
+  mismatch; the source has not been checked.
 
 ## 11. Limitations
 

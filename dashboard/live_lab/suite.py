@@ -3,7 +3,7 @@
 For every dataset size the suite builds a private hierarchy of that size, signs it with each chosen
 scenario (timed), repeats signing and verification on a sample leaf zone (several trials), starts the
 lab, replays the same seeded workload with repeated cold and warm trials, and stops the lab again.
-It needs only the built images: no Setup, Prepare or running lab. Everything a reader needs to repeat
+It needs only the verified lab images from Setup: no Prepare or running lab. Everything a reader needs to repeat
 or audit the run is stored in ``ecosystem/results/suites/<id>/``.
 
 It runs as a detached process (``python -m live_lab.suite params.json``) so a long run survives a
@@ -29,7 +29,8 @@ from pathlib import Path
 if __package__ in (None, ""):          # `python dashboard/live_lab/suite.py ...` from any folder
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from live_lab import driver
+from live_lab import minimal as _minimal
+from live_lab import driver, jobs
 
 SUITES = driver.SUITES_DIR
 BENCH_SIZES = (50, 500, 5000)         # data names in the dataset, as in the main Cipherops benchmark
@@ -73,14 +74,12 @@ def estimate_seconds(sizes: list[int], scenarios: list[str], jobs: int = 2, sign
 # ─────────────────────────── status files ───────────────────────────
 
 def _read(path: Path) -> dict:
-    return driver._read_json(path)
+    return jobs.read_json(path)
 
 
 def _write_status(d: Path, st: dict) -> None:
     """Atomic: the launcher, the suite process and the dashboard all touch this file."""
-    tmp = d / f"status.json.{os.getpid()}.tmp"
-    tmp.write_text(json.dumps(st), encoding="utf-8")
-    os.replace(tmp, d / "status.json")
+    jobs.write_status(d, st)
 
 
 def _pid_alive(pid: int | None) -> bool:
@@ -162,6 +161,7 @@ def create(params: dict) -> tuple[str, Path]:
 
 def start(params: dict) -> str:
     """Write the parameters and launch the suite as a detached process. Returns the suite id."""
+    _minimal.refuse('Starting a benchmark')
     with _start_lock():
         driver.require_no_offline()
         live = running_suite()
@@ -189,17 +189,9 @@ def start(params: dict) -> str:
 
 def cancel(suite_id: str) -> str:
     """Stop the suite process and take down the lab it was running."""
+    _minimal.refuse('Cancelling a benchmark')
     st = _read(SUITES / suite_id / "status.json")
-    pid = st.get("pid")
-    if _pid_alive(pid):
-        if os.name == "nt":
-            subprocess.run(["taskkill", "/PID", str(int(pid)), "/T", "/F"], capture_output=True,
-                           creationflags=driver.NO_WINDOW)
-        else:
-            os.kill(int(pid), 15)
-        deadline = time.time() + 10
-        while _pid_alive(pid) and time.time() < deadline:
-            time.sleep(0.1)
+    jobs.stop_worker(st.get("pid"), wait_s=10, alive=_pid_alive)
     st = _read(SUITES / suite_id / "status.json") or st
     st.update(state="cancelled", step="cancelled by the user", updated=time.time())
     _write_status(SUITES / suite_id, st)

@@ -22,78 +22,77 @@ Post-quantum DNSSEC signatures are large, so signed answers stop fitting in one 
 CipherOps measures what that changes, against classical DNSSEC and against plain SLH-DSA, using the
 [Verisign MTL](https://github.com/verisign/MTL) reference stack unmodified. It adds no cryptography of its own.
 
-> **New to DNSSEC, post-quantum signatures or MTL?** Start with [Learn](docs/learn/README.md): two short animated
+> **New to DNSSEC, post-quantum signatures or MTL?** Start with [Learn](docs/learn/README.md): three short animated
 > walkthroughs and where the IETF drafts stand.
 
 ## For the panel
 
 | | |
 | :--- | :--- |
-| **Submission** | [Deliverables](DELIVERABLES.md) · [project page and readout](hackathon/README.md) · [frozen results](hackathon/results/README.md) |
-| **Presentation** | [revised, 30 Oct 2026](hackathon/presentation/A3-PS036-TC161_2026-10-30.pdf) · [original, 13 Oct 2026](hackathon/presentation/A3-PS036-TC161_2026-10-13.pdf) |
-| **Project video** | [YouTube](https://youtu.be/FaVfeO5WTV8) |
-| **Working demo** | [Run it in your browser with Codespaces](docs/codespaces.md), or [locally](docs/getting-started.md) |
-| **How we measure** | [Methodology](docs/methodology.md) · [Architecture](docs/architecture.md) |
+| **Solution proposed** | [Revised, 31 Oct 2026](hackathon/presentation/A3-PS036-TC161_2026-10-31.pdf) · [Level 1, 13 Oct 2026](hackathon/presentation/A3-PS036-TC161_2026-10-13.pdf) |
+| **Project video** | [Team Intro - level 1](https://youtu.be/FaVfeO5WTV8) . [Level 2 - solution demo](https://youtu.be/rr-2rKe6dZE) . [Level 2 -Deliverables](https://youtu.be/Vj-sbfWenNY) |
+| **Try it now (read-only)** | **[eval.cipherops.stream](https://eval.cipherops.stream)**: the saved benchmark results, Compare, Learn, and DNS lookups against the live lab. Nothing there can change the lab ([how it works](deploy/aws/MINIMAL.md)). Reachable while the team's AWS node is running.[NOTE: This instance is shutdown since 06-nov-2026. We are working towards next iteration. Until then try the local version as detailed in further section. |
+| **Submission** | [Deliverables](DELIVERABLES.md) · [readout](hackathon/readout.md) · [findings](hackathon/feedback.md) · [frozen results](hackathon/results/README.md) |
+| **Knowledge Article By Faculty** | [PQC Algorithms - quick overview](https://youtu.be/JHi0ZwhpMB4) |
 
-Numbers live in each run's `report.html` (a frozen run is in [hackathon/results](hackathon/results/README.md)), not in the documentation, so they cannot go stale.
+Numbers live in each run's `report.html` (frozen runs are in [hackathon/results](hackathon/results/README.md)), not in
+the documentation, so they cannot go stale.
 
 ## What it measures
 
-| Mode | Algorithm | Library |
+Five algorithms on zones of 50, 500 and 5,000 names: `slh-dsa-mtl` (SLH-DSA-SHA2-128s in MTL mode,
+[Verisign MTL](https://github.com/verisign/MTL)), `slh-dsa` (the same algorithm directly, liboqs) and the classical
+`ed25519`, `ecdsa-p256` and `rsa-2048` (OpenSSL). For each: signing time, verification time, signature and response
+size, truncation, cache use and the cost of updating a zone.
+
+Two tracks answer different questions and are never drawn on one chart:
+
+| Track | What it is | Steps in the dashboard |
 | --- | --- | --- |
-| `slh-dsa-mtl` | SLH-DSA-SHA2-128s in MTL mode | [Verisign MTL](https://github.com/verisign/MTL) |
-| `slh-dsa` | SLH-DSA-SHA2-128s directly | liboqs |
-| `ed25519`, `ecdsa-p256`, `rsa-2048` | Classical DNSSEC | OpenSSL |
+| **Offline benchmark** | a C harness on one pinned core, no network: crypto cost and exact message sizes | ① Run → ② Results |
+| **Simulated lab** | root, TLD and leaf NSD servers behind a validating Unbound, with packet capture: what a resolver sees | ① Prepare → ② Query → ③ Benchmark |
 
-On zones of 50, 500 and 5,000 names: signing time, verification time, signature and response size, truncation, cache
-use, and the cost of updating a zone. Two paths answer different questions: an **offline harness** (one pinned core,
-no network) and a **simulated lab** (root, TLD and leaf NSD servers behind a validating Unbound, with packet capture).
+![CipherOps architecture](docs/architecture.png)
 
-![CipherOps architecture](docs/architecture-slide1.png)
+## Run it
 
-## Quick start
+You need Docker with Compose v2 and git. The first image build compiles OpenSSL, liboqs and MTL (tens of minutes);
+the dashboard can pull ready-made images instead (**Manage images** on its Home page).
 
-You need Docker, git and Python 3.11+, or just a browser with [Codespaces](docs/codespaces.md).
+| Where | When to use it | How |
+| --- | --- | --- |
+| **AWS** | the full 5-hour run, or any timing you want to report | below, and [deploy/aws](deploy/aws/README.md) |
+| **Local machine** | development, or the quick run | below, and [Getting started](docs/getting-started.md) |
+| **Codespaces** | trying it with nothing installed | [Codespaces](docs/codespaces.md) |
+
+**On AWS** (needs the AWS CLI and the Session Manager plugin; about 15 minutes to deploy, no port is opened):
+
+```bash
+aws cloudformation deploy --region ap-south-1 --stack-name cipherops \
+  --template-file deploy/aws/cipherops-node.yaml --capabilities CAPABILITY_IAM
+aws cloudformation describe-stacks --region ap-south-1 --stack-name cipherops \
+  --query "Stacks[0].Outputs[?OutputKey=='DashboardTunnel'].OutputValue" --output text   # run what it prints, then open http://localhost:8501
+aws cloudformation delete-stack --region ap-south-1 --stack-name cipherops              # when you are done: it bills by the hour
+```
+
+The node pulls the pinned images from `ghcr.io/hackchamp25`, so both tracks are ready on arrival. To let a teammate in
+with their own AWS login, see [ACCESS.md](deploy/aws/ACCESS.md); for the full run and freezing its result, see
+[results](hackathon/results/README.md#reproduce).
+
+**Locally:**
 
 ```bash
 git clone https://github.com/aiori-hackathon/A3-PS036-TC161.git && cd A3-PS036-TC161
-pip install -r requirements-dashboard.txt
-streamlit run dashboard/live_lab/app.py          # the dashboard
-bash scripts/run_benchmark.sh configs/quick.yaml  # or: a short offline run from the shell
+pip install -r requirements-dashboard.txt                 # Python 3.11+
+streamlit run dashboard/live_lab/app.py                   # the dashboard
+bash scripts/run_benchmark.sh configs/quick.yaml          # or a short offline run from the shell
 ```
 
-The first image build compiles OpenSSL, liboqs and MTL from source and takes a while; later runs reuse it. Full
-instructions, Windows commands, tests and troubleshooting: [Getting started](docs/getting-started.md).
+Setting `CIPHEROPS_MINIMAL=1` starts a read-only copy of the dashboard, as hosted above. Commands for Linux, macOS and
+Windows PowerShell: [minimal mode](deploy/aws/MINIMAL.md#run-it-locally).
 
-## The dashboard
-
-| Tile | Use |
-| --- | --- |
-| **Setup** | build the images, sign the zones, start the lab |
-| **Live** | send queries, flush the cache, inspect the captured packets |
-| **Benchmark** | *Offline (harness)* or *Simulated (Verisign stack)*, run from the browser |
-| **Compare** | algorithms side by side, run against run, and the cost of zone updates |
-| **Learn** | why DNSSEC needs MTL, and an operator walkthrough |
-| **Reset** | clear only what you choose |
-
-Details: [dashboard guide](dashboard/live_lab/README.md).
-
-## Scope, honestly
-
-Empirical timings and wire sizes on pinned stacks; not a security proof and not a production DNSSEC product. Offline
-and simulated results use different library versions and are never mixed; simulated timings are indicative, not
-core-pinned; the MTL drafts are not RFCs yet. Full list and software stacks:
-[Scope and limits](docs/scope-and-limits.md).
-
-## Documentation
-
-The full index is [docs/README.md](docs/README.md).
-
-| | |
-| --- | --- |
-| **Use** | [Getting started](docs/getting-started.md) · [Codespaces](docs/codespaces.md) · [Dashboard guide](dashboard/live_lab/README.md) |
-| **Understand** | [Learn](docs/learn/README.md) · [Scope and limits](docs/scope-and-limits.md) · [Design decisions](docs/design-decisions.md) |
-| **Check** | [Methodology](docs/methodology.md) · [Architecture](docs/architecture.md) · [End-to-end flow](docs/end-to-end-flow.md) · [Outputs reference](docs/outputs-reference.md) |
+[Dashboard guide](dashboard/live_lab/README.md) · [Scope and limits](docs/scope-and-limits.md) · all documents:
+[docs/README.md](docs/README.md)
 
 ## Team and license
 
