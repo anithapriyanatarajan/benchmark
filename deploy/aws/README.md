@@ -71,6 +71,28 @@ aws ssm start-session --region ap-south-1 --target <instance id>     # then: sud
 Common causes: the registry images are private (pull is denied), the branch has no `deploy/aws/bootstrap.sh`, or the
 account cannot reach the internet from the new VPC.
 
+## Build and deploy from a fork
+
+For `anithapriyanatarajan/benchmark`, pushing to `ci/publish-images` runs the GitHub Actions workflow. It builds the
+`latest` offline image and the `draft06` lab images, then publishes them to `ghcr.io/anithapriyanatarajan` using
+GitHub Actions' token. No personal access token is needed. The first time, make the four GHCR packages public so the
+EC2 node can pull them anonymously.
+
+After the workflow succeeds, deploy the same source branch and image registry from the repository root:
+
+```bash
+aws cloudformation deploy --region ap-south-1 --stack-name cipherops \
+  --template-file deploy/aws/cipherops-node.yaml --capabilities CAPABILITY_IAM \
+  --parameter-overrides \
+    RepoUrl=https://github.com/anithapriyanatarajan/benchmark.git \
+    RepoBranch=ci/publish-images \
+    Registry=ghcr.io/anithapriyanatarajan
+```
+
+CloudFormation clones that branch onto EC2; the bootstrap pulls the published images from the specified registry.
+It does not build the images on EC2. To use GitHub's manual **Run workflow** button later, merge the workflow into the
+fork's default branch first.
+
 ## Image registry
 
 All pinned images come from one registry, the team's: **`ghcr.io/hackchamp25`**. It is the default of the template, of
